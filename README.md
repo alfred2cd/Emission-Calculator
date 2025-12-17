@@ -1,28 +1,22 @@
-# Nigeria Carbon Footprint Calculator 🌍
+# LAMATA Carbon Emission Calculator Tool
 
-A comprehensive web application for calculating greenhouse gas emissions using Nigerian standards and emission factors.
+A web-based carbon emission calculation tool specifically designed for the Lagos Metropolitan Area Transport Authority (LAMATA) with Nigerian-specific emission factors.
 
 ## Features
 
-### 🎯 Key Features
-- **Nigeria-Specific Standards**: All emission factors adapted for Nigerian context
-- **Comprehensive Scope Coverage**: Full Scope 1, 2, and 3 calculations
-- **User-Friendly Interface**: Intuitive Streamlit web interface
-- **Real-time Calculations**: Instant emission calculations as data is entered
-- **Visual Analytics**: Interactive charts and graphs
-- **Export Capabilities**: Export reports to Excel format
-
-### 📊 Emission Factors Included
-1. **Fuel Standards**: Nigerian fuel blends (PMS, AGO, DPK, ATK)
-2. **Electricity Grid**: Nigerian grid regions and factors
-3. **Transportation**: Nigerian vehicle types (Keke NAPEP, BRT, etc.)
-4. **Waste Management**: Nigerian waste treatment methods
-5. **Industrial Processes**: Nigerian industrial sector factors
-6. **Agriculture**: Nigerian agricultural practices
+- **User Authentication**: Secure login and registration system
+- **Nigerian Standards**: Uses Nigeria-specific emission factors for accurate calculations
+- **Three Scopes Coverage**: 
+  - Scope 1: Direct emissions (fuel combustion, vehicles)
+  - Scope 2: Indirect emissions from purchased energy
+  - Scope 3: Other indirect emissions (business travel, commuting, etc.)
+- **Data Visualization**: Interactive charts and graphs
+- **Reporting**: Comprehensive emission reports with recommendations
+- **Demo Data**: Pre-loaded demo data for Lagos transport operations
 
 ## Installation
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/alfred2cd/nigeria-carbon-calculator.git
-cd nigeria-carbon-calculator
+git clone <repository-url>
+cd lamata-emission-tool
