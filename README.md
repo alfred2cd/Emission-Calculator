@@ -24,5 +24,5 @@ A comprehensive web application for calculating greenhouse gas emissions using N
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/nigeria-carbon-calculator.git
+git clone https://github.com/alfred2cd/nigeria-carbon-calculator.git
 cd nigeria-carbon-calculator
