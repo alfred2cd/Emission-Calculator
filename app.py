@@ -1,287 +1,227 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
+<!-- templates/report.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emission Report - LAMATA</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .report-header { background: #0066cc; color: white; padding: 30px; border-radius: 10px; }
+        .section-title { border-left: 4px solid #0066cc; padding-left: 15px; margin: 30px 0 20px 0; }
+        .emission-table th { background-color: #f8f9fa; }
+    </style>
+</head>
+<body>
+    <div class="container mt-5 mb-5">
+        <!-- Report Header -->
+        <div class="report-header">
+            <div class="row">
+                <div class="col-md-8">
+                    <h1>Carbon Footprint Report</h1>
+                    <h4>{{ report.organization.name }}</h4>
+                    <p>{{ report.organization.address }}</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <p>Reporting Period: {{ report.organization.reporting_period.start }} to {{ report.organization.reporting_period.end }}</p>
+                    <p>Prepared by: {{ report.prepared_by }}</p>
+                    <p>Date: {{ report.date }}</p>
+                </div>
+            </div>
+        </div>
 
-# Page configuration
-st.set_page_config(
-    page_title="Nigeria Carbon Calculator",
-    page_icon="🌍",
-    layout="wide"
-)
+        <!-- Executive Summary -->
+        <div class="mt-5">
+            <h3 class="section-title">Executive Summary</h3>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h2>{{ "{:,.0f}".format(report.emissions.totals.total) }}</h2>
+                            <p class="text-muted">Total CO2e Emissions (kg)</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5>Key Findings</h5>
+                            <ul>
+                                <li>Scope 1 emissions contribute {{ "%.1f"|format(report.emissions.totals.scope1/report.emissions.totals.total*100) }}% of total emissions</li>
+                                <li>Largest emission source: {{ "Transport Operations" if report.emissions.totals.scope1 > report.emissions.totals.scope2 else "Electricity Consumption" }}</li>
+                                <li>Employee commuting contributes {{ "%.1f"|format(sum(report.emissions.scope3.employee_commuting.values())/report.emissions.totals.total*100) }}% to Scope 3</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-# Custom CSS
-st.markdown("""
-<style>
-    .big-font {
-        font-size: 24px !important;
-        color: #1E6B52;
-    }
-    .metric-box {
-        background-color: #f0f8ff;
-        padding: 20px;
-        border-radius: 10px;
-        border-left: 5px solid #1E6B52;
-        margin: 10px 0;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Main title
-st.title("🌍 Nigeria Carbon Footprint Calculator")
-st.markdown("### *Simple, Fast, and Nigerian-Focused*")
-
-# Initialize session state
-if 'step' not in st.session_state:
-    st.session_state.step = 1
-
-# Navigation
-st.sidebar.title("Navigation")
-page = st.sidebar.radio("Go to:", 
-    ["🏠 Home", "📊 Calculator", "📈 Results", "ℹ️ About"])
-
-if page == "🏠 Home":
-    st.markdown('<div class="big-font">Welcome to the Nigeria Carbon Calculator!</div>', unsafe_allow_html=True)
-    
-    st.write("""
-    ### This tool helps Nigerian organizations:
-    - 📊 Measure carbon emissions
-    - 🇳🇬 Use Nigerian-specific standards
-    - 💰 Estimate cost savings
-    - 🌱 Plan sustainability initiatives
-    
-    ### How to use:
-    1. Go to **Calculator** page
-    2. Enter your organization's data
-    3. View results instantly
-    4. Get recommendations
-    
-    ### Why it's important:
-    - Nigeria is committed to reducing emissions by 20% by 2030
-    - Carbon footprint affects climate change
-    - Sustainability improves business reputation
-    """)
-    
-    st.image("https://via.placeholder.com/800x300/1E6B52/FFFFFF?text=Nigeria+Sustainability", 
-             caption="Building a Sustainable Nigeria")
-
-elif page == "📊 Calculator":
-    st.header("📋 Enter Your Organization Data")
-    
-    # Step 1: Basic Info
-    with st.expander("🏢 Organization Details", expanded=True):
-        col1, col2 = st.columns(2)
-        with col1:
-            name = st.text_input("Organization Name")
-            sector = st.selectbox("Industry Sector", 
-                ["Manufacturing", "Services", "Agriculture", "Construction", 
-                 "Transportation", "Education", "Healthcare", "Other"])
-        with col2:
-            location = st.selectbox("Location", 
-                ["Lagos", "Abuja", "Port Harcourt", "Kano", "Ibadan", "Other"])
-            employees = st.number_input("Number of Employees", min_value=1, value=10)
-    
-    # Step 2: Energy Use
-    with st.expander("⚡ Energy Consumption"):
-        st.write("**Monthly Average**")
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            electricity = st.number_input("Electricity (kWh)", min_value=0, value=5000)
-            grid_source = st.selectbox("Grid Source", 
-                ["National Grid", "Generator", "Solar", "Mixed"])
-        with col2:
-            diesel = st.number_input("Diesel (liters)", min_value=0, value=500)
-        with col3:
-            petrol = st.number_input("Petrol (liters)", min_value=0, value=300)
-            lpg = st.number_input("LPG (kg)", min_value=0, value=100)
-    
-    # Step 3: Transportation
-    with st.expander("🚗 Transportation"):
-        col1, col2 = st.columns(2)
-        with col1:
-            vehicles = st.number_input("Company Vehicles", min_value=0, value=3)
-            km_per_month = st.number_input("Monthly Distance (km)", min_value=0, value=2000)
-        with col2:
-            air_travel = st.number_input("Air Travel (hours/year)", min_value=0, value=50)
-            business_trips = st.number_input("Business Trips/month", min_value=0, value=2)
-    
-    # Step 4: Waste
-    with st.expander("🗑️ Waste Management"):
-        col1, col2 = st.columns(2)
-        with col1:
-            waste_kg = st.number_input("Waste (kg/month)", min_value=0, value=100)
-            recycling = st.selectbox("Recycling Practice", 
-                ["None", "Some", "Comprehensive"])
-        with col2:
-            water_usage = st.number_input("Water (m³/month)", min_value=0, value=100)
-            paper_kg = st.number_input("Paper (kg/month)", min_value=0, value=50)
-    
-    # Calculate Button
-    if st.button("📊 Calculate Carbon Footprint", type="primary"):
-        # Nigerian emission factors
-        factors = {
-            'electricity': 0.55,  # kgCO2/kWh (Nigeria grid)
-            'diesel': 2.66,       # kgCO2/liter
-            'petrol': 2.34,       # kgCO2/liter
-            'lpg': 1.56,          # kgCO2/kg
-            'vehicle': 0.25,      # kgCO2/km
-            'air_travel': 90,     # kgCO2/hour
-            'waste': 0.35,        # kgCO2/kg
-            'water': 0.3,         # kgCO2/m³
-            'paper': 1.1,         # kgCO2/kg
-        }
-        
-        # Calculations (monthly)
-        elec_co2 = electricity * factors['electricity']
-        diesel_co2 = diesel * factors['diesel']
-        petrol_co2 = petrol * factors['petrol']
-        lpg_co2 = lpg * factors['lpg']
-        transport_co2 = vehicles * km_per_month * factors['vehicle']
-        air_co2 = air_travel * factors['air_travel'] / 12  # Monthly
-        waste_co2 = waste_kg * factors['waste']
-        water_co2 = water_usage * factors['water']
-        paper_co2 = paper_kg * factors['paper']
-        
-        # Totals
-        monthly_co2 = elec_co2 + diesel_co2 + petrol_co2 + lpg_co2 + transport_co2 + air_co2 + waste_co2 + water_co2 + paper_co2
-        annual_co2 = monthly_co2 * 12
-        per_employee = annual_co2 / employees if employees > 0 else 0
-        
-        # Save to session state
-        st.session_state.results = {
-            'monthly': monthly_co2,
-            'annual': annual_co2,
-            'per_employee': per_employee,
-            'details': {
-                'Electricity': elec_co2 * 12,
-                'Diesel': diesel_co2 * 12,
-                'Petrol': petrol_co2 * 12,
-                'LPG': lpg_co2 * 12,
-                'Transport': transport_co2 * 12,
-                'Air Travel': air_co2 * 12,
-                'Waste': waste_co2 * 12,
-                'Water': water_co2 * 12,
-                'Paper': paper_co2 * 12,
-            }
-        }
-        
-        st.success(f"✅ Calculation complete! Annual footprint: **{annual_co2:,.0f} kgCO₂**")
-        st.balloons()
-
-elif page == "📈 Results":
-    st.header("📊 Your Carbon Footprint Results")
-    
-    if 'results' not in st.session_state:
-        st.warning("⚠️ Please calculate your footprint first on the Calculator page.")
-    else:
-        results = st.session_state.results
-        
-        # Key metrics
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.markdown('<div class="metric-box">', unsafe_allow_html=True)
-            st.metric("Annual Emissions", f"{results['annual']:,.0f} kgCO₂")
-            st.caption("Total per year")
-            st.markdown('</div>', unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown('<div class="metric-box">', unsafe_allow_html=True)
-            st.metric("Per Employee", f"{results['per_employee']:,.0f} kgCO₂")
-            st.caption("Average per employee")
-            st.markdown('</div>', unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown('<div class="metric-box">', unsafe_allow_html=True)
-            equivalent_cars = results['annual'] / 4200
-            st.metric("Equivalent Cars", f"{equivalent_cars:,.1f}")
-            st.caption("Number of cars driven for one year")
-            st.markdown('</div>', unsafe_allow_html=True)
-        
-        # Breakdown chart
-        st.subheader("📊 Emission Breakdown")
-        
-        if results['details']:
-            # Create DataFrame for chart
-            df = pd.DataFrame({
-                'Category': list(results['details'].keys()),
-                'Emissions (kgCO₂)': list(results['details'].values())
-            })
+        <!-- Detailed Breakdown -->
+        <div class="mt-5">
+            <h3 class="section-title">Detailed Emission Breakdown</h3>
             
-            # Display as bar chart
-            st.bar_chart(df.set_index('Category'))
-            
-            # Show table
-            st.write("**Detailed Breakdown:**")
-            df_display = df.copy()
-            df_display['Percentage'] = (df_display['Emissions (kgCO₂)'] / df_display['Emissions (kgCO₂)'].sum() * 100).round(1)
-            st.dataframe(df_display, use_container_width=True)
-        
-        # Recommendations
-        st.subheader("🌱 Recommendations to Reduce Emissions")
-        
-        recommendations = [
-            ("Switch to LED lighting", "Can reduce electricity use by 75%", "High impact"),
-            ("Regular vehicle maintenance", "Improves fuel efficiency by 15%", "Medium impact"),
-            ("Implement recycling program", "Reduces waste emissions by 30%", "Medium impact"),
-            ("Use video conferencing", "Cuts air travel emissions", "High impact"),
-            ("Install solar panels", "Reduces grid dependency", "High impact"),
-            ("Encourage carpooling", "Reduces transport emissions", "Low impact"),
-            ("Go paperless", "Eliminates paper emissions", "Medium impact"),
-            ("Optimize AC usage", "Saves 20% on electricity", "Medium impact"),
-        ]
-        
-        for i, (title, desc, impact) in enumerate(recommendations, 1):
-            with st.expander(f"{i}. {title} ({impact})"):
-                st.write(desc)
-                if st.button(f"Learn more about this", key=f"learn_{i}"):
-                    st.info(f"More details about {title} would appear here. Consider consulting a sustainability expert.")
+            <table class="table table-bordered emission-table">
+                <thead>
+                    <tr>
+                        <th>Scope</th>
+                        <th>Category</th>
+                        <th>Sub-category</th>
+                        <th>Emissions (kgCO2e)</th>
+                        <th>Percentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Scope 1 -->
+                    <tr>
+                        <td rowspan="5" class="table-danger">Scope 1</td>
+                        <td>Stationary Combustion</td>
+                        <td>Diesel</td>
+                        <td>{{ "{:,.0f}".format(report.emissions.scope1.stationary_combustion.diesel) }}</td>
+                        <td>{{ "%.1f"|format(report.emissions.scope1.stationary_combustion.diesel/report.emissions.totals.total*100) }}%</td>
+                    </tr>
+                    <tr>
+                        <td>Stationary Combustion</td>
+                        <td>Petrol</td>
+                        <td>{{ "{:,.0f}".format(report.emissions.scope1.stationary_combustion.petrol) }}</td>
+                        <td>{{ "%.1f"|format(report.emissions.scope1.stationary_combustion.petrol/report.emissions.totals.total*100) }}%</td>
+                    </tr>
+                    <tr>
+                        <td>Mobile Combustion</td>
+                        <td>Bus Fleet</td>
+                        <td>{{ "{:,.0f}".format(report.emissions.scope1.mobile_combustion.bus_fleet) }}</td>
+                        <td>{{ "%.1f"|format(report.emissions.scope1.mobile_combustion.bus_fleet/report.emissions.totals.total*100) }}%</td>
+                    </tr>
+                    <tr>
+                        <td>Fugitive Emissions</td>
+                        <td>-</td>
+                        <td>{{ "{:,.0f}".format(report.emissions.scope1.fugitive_emissions) }}</td>
+                        <td>{{ "%.1f"|format(report.emissions.scope1.fugitive_emissions/report.emissions.totals.total*100) }}%</td>
+                    </tr>
+                    <tr class="table-active">
+                        <td colspan="3"><strong>Total Scope 1</strong></td>
+                        <td><strong>{{ "{:,.0f}".format(report.emissions.totals.scope1) }}</strong></td>
+                        <td><strong>{{ "%.1f"|format(report.emissions.totals.scope1/report.emissions.totals.total*100) }}%</strong></td>
+                    </tr>
+                    
+                    <!-- Scope 2 -->
+                    <tr>
+                        <td rowspan="2" class="table-success">Scope 2</td>
+                        <td>Purchased Electricity</td>
+                        <td>Grid Power</td>
+                        <td>{{ "{:,.0f}".format(report.emissions.scope2.purchased_electricity) }}</td>
+                        <td>{{ "%.1f"|format(report.emissions.scope2.purchased_electricity/report.emissions.totals.total*100) }}%</td>
+                    </tr>
+                    <tr class="table-active">
+                        <td colspan="3"><strong>Total Scope 2</strong></td>
+                        <td><strong>{{ "{:,.0f}".format(report.emissions.totals.scope2) }}</strong></td>
+                        <td><strong>{{ "%.1f"|format(report.emissions.totals.scope2/report.emissions.totals.total*100) }}%</strong></td>
+                    </tr>
+                    
+                    <!-- Scope 3 -->
+                    <tr>
+                        <td rowspan="5" class="table-info">Scope 3</td>
+                        <td>Business Travel</td>
+                        <td>Air Travel</td>
+                        <td>{{ "{:,.0f}".format(report.emissions.scope3.business_travel.air) }}</td>
+                        <td>{{ "%.1f"|format(report.emissions.scope3.business_travel.air/report.emissions.totals.total*100) }}%</td>
+                    </tr>
+                    <tr>
+                        <td>Employee Commuting</td>
+                        <td>Bus</td>
+                        <td>{{ "{:,.0f}".format(report.emissions.scope3.employee_commuting.bus) }}</td>
+                        <td>{{ "%.1f"|format(report.emissions.scope3.employee_commuting.bus/report.emissions.totals.total*100) }}%</td>
+                    </tr>
+                    <tr>
+                        <td>Employee Commuting</td>
+                        <td>Car</td>
+                        <td>{{ "{:,.0f}".format(report.emissions.scope3.employee_commuting.car) }}</td>
+                        <td>{{ "%.1f"|format(report.emissions.scope3.employee_commuting.car/report.emissions.totals.total*100) }}%</td>
+                    </tr>
+                    <tr>
+                        <td>Purchased Goods</td>
+                        <td>-</td>
+                        <td>{{ "{:,.0f}".format(report.emissions.scope3.purchased_goods) }}</td>
+                        <td>{{ "%.1f"|format(report.emissions.scope3.purchased_goods/report.emissions.totals.total*100) }}%</td>
+                    </tr>
+                    <tr class="table-active">
+                        <td colspan="3"><strong>Total Scope 3</strong></td>
+                        <td><strong>{{ "{:,.0f}".format(report.emissions.totals.scope3) }}</strong></td>
+                        <td><strong>{{ "%.1f"|format(report.emissions.totals.scope3/report.emissions.totals.total*100) }}%</strong></td>
+                    </tr>
+                    
+                    <!-- Grand Total -->
+                    <tr class="table-primary">
+                        <td colspan="3"><h5>GRAND TOTAL</h5></td>
+                        <td><h5>{{ "{:,.0f}".format(report.emissions.totals.total) }} kgCO2e</h5></td>
+                        <td><h5>100%</h5></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
 
-elif page == "ℹ️ About":
-    st.header("ℹ️ About This Tool")
-    
-    st.write("""
-    ### 🇳🇬 Nigeria Carbon Footprint Calculator
-    This tool is designed specifically for Nigerian organizations to measure and manage their carbon emissions.
-    
-    ### Why Nigerian Standards?
-    - Uses Nigeria-specific emission factors
-    - Considers local fuel blends (PMS, AGO, DPK)
-    - Accounts for Nigerian grid electricity mix
-    - Incorporates local transportation patterns
-    
-    ### Emission Factors Used:
-    1. **Electricity**: 0.55 kgCO₂/kWh (National grid average)
-    2. **Diesel**: 2.66 kgCO₂/liter
-    3. **Petrol**: 2.34 kgCO₂/liter
-    4. **LPG**: 1.56 kgCO₂/kg
-    5. **Vehicles**: 0.25 kgCO₂/km
-    6. **Air Travel**: 90 kgCO₂/hour
-    7. **Waste**: 0.35 kgCO₂/kg
-    8. **Water**: 0.3 kgCO₂/m³
-    9. **Paper**: 1.1 kgCO₂/kg
-    
-    ### Data Sources:
-    - Nigerian Electricity Regulatory Commission (NERC)
-    - National Bureau of Statistics (NBS)
-    - Federal Ministry of Environment
-    - International best practices adapted for Nigeria
-    
-    ### Disclaimer:
-    This tool provides estimates for awareness and planning. For official carbon accounting, consult certified professionals.
-    """)
-    
-    # Contact
-    st.subheader("📞 Contact & Support")
-    st.write("""
-    **Need help?**
-    - Email: sustainability@nigeria.gov.ng
-    - Phone: +234 800 000 0000
-    - Hours: Monday-Friday, 9am-5pm WAT
-    
-    **Want to contribute?**
-    This is an open-source project. Contact us to contribute data or improvements.
-    """)
+        <!-- Reduction Targets -->
+        <div class="mt-5">
+            <h3 class="section-title">Emission Reduction Targets</h3>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5>Target Overview</h5>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">
+                                    Scope 1 Reduction: {{ report.reduction_targets.scope1*100 }}%
+                                    <div class="progress mt-2">
+                                        <div class="progress-bar bg-danger" style="width: 25%">Current Progress</div>
+                                    </div>
+                                </li>
+                                <li class="list-group-item">
+                                    Scope 2 Reduction: {{ report.reduction_targets.scope2*100 }}%
+                                    <div class="progress mt-2">
+                                        <div class="progress-bar bg-success" style="width: 40%">Current Progress</div>
+                                    </div>
+                                </li>
+                                <li class="list-group-item">
+                                    Scope 3 Reduction: {{ report.reduction_targets.scope3*100 }}%
+                                    <div class="progress mt-2">
+                                        <div class="progress-bar bg-info" style="width: 15%">Current Progress</div>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5>Recommended Actions</h5>
+                            <ol>
+                                <li>Transition bus fleet to CNG/LNG fuel</li>
+                                <li>Install solar panels at depots and offices</li>
+                                <li>Implement telecommuting policy for staff</li>
+                                <li>Optimize route planning for fuel efficiency</li>
+                                <li>Establish waste recycling program</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-# Footer
-st.markdown("---")
-st.markdown("*Made with ❤️ for Nigeria's Sustainable Future*")
-st.caption("Version 1.0 | Last updated: 2024")
+        <!-- Footer -->
+        <div class="mt-5 text-center">
+            <hr>
+            <p class="text-muted">This report was generated using LAMATA Carbon Emission Calculator Tool v1.0</p>
+            <p>For questions or additional analysis, contact: sustainability@lamata.lagosstate.gov.ng</p>
+            <button class="btn btn-primary" onclick="window.print()">Print Report</button>
+            <button class="btn btn-success" onclick="downloadReport()">Download as PDF</button>
+        </div>
+    </div>
+
+    <script>
+        function downloadReport() {
+            alert('Report download functionality would be implemented in production');
+        }
+    </script>
+</body>
+</html>
